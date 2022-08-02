@@ -19,7 +19,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.NoType;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Locale;
@@ -67,14 +66,23 @@ public class JsonDoclet implements Doclet {
         final var object = new JsonObject();
         object.addProperty("text", tree.getFirstSentence().toString() + '\n' + tree.getBody().toString());
         final var tags = new JsonObject();
+        final var params = new JsonObject();
+        final var typeParams = new JsonObject();
         for (final DocTree docTree : tree.getBlockTags()) {
+            if (docTree.getKind() == DocTree.Kind.PARAM) {
+                final var value = docTree.toString().split(" ", 3);
+                if (value[1].startsWith("<")) typeParams.addProperty(value[1].substring(1, value[1].length() - 1), value[2]);
+                else params.addProperty(value[1], value[2]);
+                continue;
+            }
             final var value = docTree.toString().split(" ", 2);
-            System.out.println(Arrays.toString(value));
             tags.addProperty(
                     docTree.getKind().toString().toLowerCase(),
                     value.length == 2 ? value[1] : "");
         }
         object.add("tags", tags);
+        object.add("params", params);
+        object.add("typeParams", typeParams);
         return object;
     }
 
