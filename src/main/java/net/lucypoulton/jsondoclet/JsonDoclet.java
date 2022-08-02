@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Locale;
 import java.util.Set;
 
+import static net.lucypoulton.jsondoclet.JsonArrayUtils.addIfNotEmpty;
 import static net.lucypoulton.jsondoclet.JsonArrayUtils.toStringArray;
 
 /**
@@ -86,8 +87,8 @@ public class JsonDoclet implements Doclet {
         object.addProperty("kind", element.getKind().toString());
         object.addProperty("name", element.getSimpleName().toString());
 
-        object.add("modifiers", toStringArray(element.getModifiers(), Enum::name));
-        object.add("decorations", toStringArray(element.getAnnotationMirrors()));
+        addIfNotEmpty(object, "modifiers", toStringArray(element.getModifiers(), Enum::name));
+        addIfNotEmpty(object, "decorations", toStringArray(element.getAnnotationMirrors()));
 
         final var doc = env.getDocTrees().getDocCommentTree(element);
         if (doc != null) object.add("doc", comment(doc));
@@ -96,15 +97,14 @@ public class JsonDoclet implements Doclet {
             object.addProperty("qualifiedName", qn.getQualifiedName().toString());
 
         if (element instanceof Parameterizable param) {
-            object.add("typeParameters", toElementArray(param.getTypeParameters(), env));
+            addIfNotEmpty(object, "typeParameters", toElementArray(param.getTypeParameters(), env));
         }
         if (element instanceof TypeElement type) {
             final var superclass = type.getSuperclass();
             if (!(superclass instanceof NoType)) {
                 object.addProperty("extends", superclass.toString());
             }
-            object.add("implements",
-                    toStringArray(type.getInterfaces()));
+            object.add("implements", toStringArray(type.getInterfaces()));
 
         } else if (element instanceof ExecutableElement executable) {
             object.addProperty("returnType", executable.getReturnType().toString());
