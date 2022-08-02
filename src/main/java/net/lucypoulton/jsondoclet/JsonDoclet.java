@@ -88,7 +88,7 @@ public class JsonDoclet implements Doclet {
         object.addProperty("name", element.getSimpleName().toString());
 
         addIfNotEmpty(object, "modifiers", toStringArray(element.getModifiers(), Enum::name));
-        addIfNotEmpty(object, "decorations", toStringArray(element.getAnnotationMirrors()));
+        addIfNotEmpty(object, "decorations", toStringArray(element.getAnnotationMirrors(), d -> d.toString().substring(1)));
 
         final var doc = env.getDocTrees().getDocCommentTree(element);
         if (doc != null) object.add("doc", comment(doc));
