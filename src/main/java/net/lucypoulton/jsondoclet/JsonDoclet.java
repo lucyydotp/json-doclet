@@ -19,6 +19,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.NoType;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Set;
@@ -53,7 +54,7 @@ public class JsonDoclet implements Doclet {
     @Override
     public boolean run(final DocletEnvironment environment) {
         for (final Element element : environment.getSpecifiedElements()) {
-            System.out.println(gson.toJson(print(element, environment)));
+            System.out.println(gson.toJson(serialise(element, environment)));
         }
         return true;
     }
@@ -74,7 +75,13 @@ public class JsonDoclet implements Doclet {
         return object;
     }
 
-    public static JsonObject print(final Element element, final DocletEnvironment env) {
+    private static JsonArray toElementArray(Collection<? extends Element> collection, final DocletEnvironment env) {
+        final var array = new JsonArray();
+        for (final var element : collection) array.add(serialise(element, env));
+        return array;
+    }
+
+    private static JsonObject serialise(final Element element, final DocletEnvironment env) {
         final var object = new JsonObject();
         object.addProperty("kind", element.getKind().toString());
         object.addProperty("name", element.getSimpleName().toString());
@@ -89,9 +96,7 @@ public class JsonDoclet implements Doclet {
             object.addProperty("qualifiedName", qn.getQualifiedName().toString());
 
         if (element instanceof Parameterizable param) {
-            final var array = new JsonArray();
-            for (final var type : param.getTypeParameters()) array.add(print(type, env));
-            object.add("typeParameters", array);
+            object.add("typeParameters", toElementArray(param.getTypeParameters(), env));
         }
         if (element instanceof TypeElement type) {
             final var superclass = type.getSuperclass();
@@ -103,21 +108,14 @@ public class JsonDoclet implements Doclet {
 
         } else if (element instanceof ExecutableElement executable) {
             object.addProperty("returnType", executable.getReturnType().toString());
-            final var params = new JsonArray();
-            for (final var param : executable.getParameters()) params.add(print(param, env));
-            object.add("parameters", params);
-        }
-        else if (element instanceof VariableElement param) {
+            object.add("parameters", toElementArray(executable.getParameters(), env));
+        } else if (element instanceof VariableElement param) {
             object.addProperty("type", param.asType().toString());
-        }
-        else if (element instanceof TypeParameterElement type) {
+        } else if (element instanceof TypeParameterElement type) {
             object.add("extends", toStringArray(type.getBounds()));
         }
 
-        final var children = new JsonArray();
-        for (final Element enclosedElement : element.getEnclosedElements()) {
-            children.add(print(enclosedElement, env));
-        }
+        final var children = toElementArray(element.getEnclosedElements(), env);
         if (children.size() > 0) object.add("children", children);
         return object;
     }
