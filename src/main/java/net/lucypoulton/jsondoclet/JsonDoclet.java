@@ -12,10 +12,13 @@ import jdk.javadoc.doclet.DocletEnvironment;
 import jdk.javadoc.doclet.Reporter;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Parameterizable;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.NoType;
-import javax.lang.model.type.TypeMirror;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Set;
@@ -73,11 +76,11 @@ public class JsonDoclet implements Doclet {
 
     public static JsonObject print(final Element element, final DocletEnvironment env) {
         final var object = new JsonObject();
-        object.addProperty("type", element.getKind().toString());
+        object.addProperty("kind", element.getKind().toString());
         object.addProperty("name", element.getSimpleName().toString());
 
         object.add("modifiers", toStringArray(element.getModifiers(), Enum::name));
-        object.add("decorations", toStringArray(element.getAnnotationMirrors(), Object::toString));
+        object.add("decorations", toStringArray(element.getAnnotationMirrors()));
 
         final var doc = env.getDocTrees().getDocCommentTree(element);
         if (doc != null) object.add("doc", comment(doc));
@@ -85,13 +88,30 @@ public class JsonDoclet implements Doclet {
         if (element instanceof QualifiedNameable qn)
             object.addProperty("qualifiedName", qn.getQualifiedName().toString());
 
+        if (element instanceof Parameterizable param) {
+            final var array = new JsonArray();
+            for (final var type : param.getTypeParameters()) array.add(print(type, env));
+            object.add("typeParameters", array);
+        }
         if (element instanceof TypeElement type) {
             final var superclass = type.getSuperclass();
             if (!(superclass instanceof NoType)) {
                 object.addProperty("extends", superclass.toString());
             }
             object.add("implements",
-                    toStringArray(type.getInterfaces(), TypeMirror::toString));
+                    toStringArray(type.getInterfaces()));
+
+        } else if (element instanceof ExecutableElement executable) {
+            object.addProperty("returnType", executable.getReturnType().toString());
+            final var params = new JsonArray();
+            for (final var param : executable.getParameters()) params.add(print(param, env));
+            object.add("parameters", params);
+        }
+        else if (element instanceof VariableElement param) {
+            object.addProperty("type", param.asType().toString());
+        }
+        else if (element instanceof TypeParameterElement type) {
+            object.add("extends", toStringArray(type.getBounds()));
         }
 
         final var children = new JsonArray();

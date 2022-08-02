@@ -7,16 +7,18 @@ package net.lucypoulton.jsondoclet.test;
  *
  * @since the 21st night of september
  */
-public class ExampleClass implements ExampleInterface<String> {
+public class ExampleClass implements ExampleInterface<ExampleClass, String> {
+
+    public final int field = 4;
 
     /**
-     * An example field.
-     *
+     * An example method.
      * @deprecated
      */
-    public @Deprecated String field() { return ""; }
+    public @Deprecated String method() { return ""; }
 
-    public String doTheThing() {
-        return "";
+    @Override
+    public ExampleClass doTheThing(String it) {
+        return null;
     }
 }
