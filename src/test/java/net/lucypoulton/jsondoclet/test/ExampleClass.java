@@ -1,10 +1,5 @@
-package net.lucypoulton.jsondoclet;
+package net.lucypoulton.jsondoclet.test;
 
-
-@SuppressWarnings("unused")
-interface ExampleInterface<T> {
-    T doTheThing();
-}
 
 /**
  * An example class.

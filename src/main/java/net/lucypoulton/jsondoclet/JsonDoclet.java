@@ -13,6 +13,9 @@ import jdk.javadoc.doclet.Reporter;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.QualifiedNameable;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.NoType;
+import javax.lang.model.type.TypeMirror;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Set;
@@ -81,6 +84,15 @@ public class JsonDoclet implements Doclet {
 
         if (element instanceof QualifiedNameable qn)
             object.addProperty("qualifiedName", qn.getQualifiedName().toString());
+
+        if (element instanceof TypeElement type) {
+            final var superclass = type.getSuperclass();
+            if (!(superclass instanceof NoType)) {
+                object.addProperty("extends", superclass.toString());
+            }
+            object.add("implements",
+                    toStringArray(type.getInterfaces(), TypeMirror::toString));
+        }
 
         final var children = new JsonArray();
         for (final Element enclosedElement : element.getEnclosedElements()) {
