@@ -1,5 +1,7 @@
 package net.lucypoulton.jsondoclet.test;
 
+import java.util.List;
+
 /**
  * An example interface.
  * @param <T> some arbitrary return type idk
@@ -13,4 +15,20 @@ public interface ExampleInterface<T, U extends String> {
      * @return something idk
      */
     T doTheThing(U thing);
+
+    /**
+     * Gets a list of T based off of some numbers. {@link #doTheThing(String)}
+     * @param numbers the numbers
+     * @return a list
+     * @see #doTheThing(String)
+     */
+    List<? extends T> getAList(int... numbers);
+
+    /**
+     * An inner interface.
+     * @param <T> the arbitrary type passed to ExampleInterface
+     */
+    interface InnerInterface<T> extends ExampleInterface<T, String> {
+        // intentionally empty
+    }
 }
