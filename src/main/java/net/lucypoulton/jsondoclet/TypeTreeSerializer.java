@@ -7,12 +7,14 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import java.lang.reflect.Type;
 
-public class TypeTreeDeserializer implements JsonSerializer<TypeTree<?>> {
+public class TypeTreeSerializer implements JsonSerializer<Tree<?>> {
+
     @Override
-    public JsonElement serialize(final TypeTree<?> src, final Type typeOfSrc, final JsonSerializationContext context) {
+    public JsonElement serialize(final Tree<?> src, final Type typeOfSrc, final JsonSerializationContext context) {
         if (src.value() == null && !src.children().isEmpty()) {
             final var out = new JsonObject();
-            for (final TypeTree<?> child : src.children()) {
+
+            for (final Tree<?> child : src.children()) {
                 out.add(child.name(), serialize(child, typeOfSrc, context));
             }
 
@@ -21,7 +23,7 @@ public class TypeTreeDeserializer implements JsonSerializer<TypeTree<?>> {
         final var out = context.serialize(src.value());
         if (!src.children().isEmpty()) {
             final var children = new JsonArray();
-            for (final TypeTree<?> child : src.children()) {
+            for (final Tree<?> child : src.children()) {
                 children.add(serialize(child, typeOfSrc, context));
             }
             ((JsonObject) out).add("children", children);

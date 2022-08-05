@@ -11,6 +11,7 @@ import jdk.javadoc.doclet.Doclet;
 import jdk.javadoc.doclet.DocletEnvironment;
 import jdk.javadoc.doclet.Reporter;
 import net.lucypoulton.jsondoclet.option.AbstractOption;
+import net.lucypoulton.jsondoclet.option.FlagOption;
 import net.lucypoulton.jsondoclet.option.OutputOption;
 import net.lucypoulton.jsondoclet.option.StringOption;
 import javax.lang.model.SourceVersion;
@@ -23,12 +24,17 @@ import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.NoType;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPOutputStream;
 
 import static net.lucypoulton.jsondoclet.JsonArrayUtils.addIfNotEmpty;
 import static net.lucypoulton.jsondoclet.JsonArrayUtils.toStringArray;
@@ -38,6 +44,12 @@ import static net.lucypoulton.jsondoclet.JsonArrayUtils.toStringArray;
  */
 @SuppressWarnings("unused")
 public class JsonDoclet implements Doclet {
+    private static final Gson gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .disableHtmlEscaping()
+            .registerTypeAdapter(Tree.class, new TypeTreeSerializer())
+            .create();
+
     @Override
     public void init(final Locale locale, final Reporter reporter) {
 
@@ -51,10 +63,11 @@ public class JsonDoclet implements Doclet {
     private final OutputOption outputOption = new OutputOption();
     private final AbstractOption<String> nameOption = new StringOption("Title", List.of("-windowtitle"));
     private final AbstractOption<String> versionOption = new StringOption("Version", List.of("-version"));
+    private final AbstractOption<Boolean> compressOption = new FlagOption("Compress", List.of("-compress", "-gzip"));
 
     @Override
     public Set<? extends Option> getSupportedOptions() {
-        return Set.of(outputOption, nameOption, versionOption);
+        return Set.of(outputOption, nameOption, versionOption, compressOption);
     }
 
     @Override
@@ -64,28 +77,34 @@ public class JsonDoclet implements Doclet {
 
     @Override
     public boolean run(final DocletEnvironment environment) {
-        final JsonArray children = new JsonArray();
-        final TypeTree<JsonObject> outTree = new TypeTree<>("", null);
-        for (final Element element : environment.getSpecifiedElements()) {
+        final Tree<JsonObject> elementTree = new Tree<>("", null);
+        if (compressOption.getValue()) System.out.println("COMPRESSING");
+        for (final Element element : environment.getIncludedElements()) {
             if (element instanceof QualifiedNameable qn) {
-                outTree.setValue(qn.getQualifiedName().toString(), serialise(qn, environment, null));
+                elementTree.setValue(qn.getQualifiedName().toString(), serialise(qn, environment, null));
             }
-            children.add(serialise(element, environment, null));
         }
+        final JsonObject out = new JsonObject();
+        out.addProperty("cod", 1);
+        out.addProperty("name", nameOption.getValue());
+        out.addProperty("version", versionOption.getValue());
+        out.add("elements", gson.toJsonTree(elementTree));
+
+        final var json = gson.toJson(out);
+
         try {
-            Files.writeString(outputOption.getValue().resolve("cod.json"), gson.toJson(outTree));
+            if (compressOption.getValue())
+                try (OutputStream output = Files.newOutputStream(outputOption.getValue().resolve("cod.json.gz"));
+                     Writer writer = new OutputStreamWriter(new GZIPOutputStream(output), StandardCharsets.UTF_8)) {
+                    writer.write(json);
+                }
+            else Files.writeString(outputOption.getValue().resolve("cod.json"), json);
         } catch (IOException e) {
             e.printStackTrace();
             return false;
         }
         return true;
     }
-
-    private static final Gson gson = new GsonBuilder()
-            .setPrettyPrinting()
-            .disableHtmlEscaping()
-            .registerTypeAdapter(TypeTree.class, new TypeTreeDeserializer())
-            .create();
 
     private static JsonElement comment(DocCommentTree tree) {
         final var object = new JsonObject();

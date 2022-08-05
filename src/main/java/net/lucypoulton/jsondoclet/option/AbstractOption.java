@@ -31,7 +31,7 @@ public abstract class AbstractOption<T> implements Doclet.Option {
 
     @Override
     public String getParameters() {
-        return getNames().get(0) + " <p1>";
+        return "<param>";
     }
 
     public Doclet.Option.Kind getKind() {
